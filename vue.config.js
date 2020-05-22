@@ -2,6 +2,7 @@ module.exports = {
     "transpileDependencies": [
         "vuetify"
     ],
+
     pages: {
         index: {
             // page 的入口
@@ -25,7 +26,8 @@ module.exports = {
             chunks: ['chunk-vendors', 'chunk-common', 'background']
         }
     },
+
     publicPath: '',
-    outputDir: 'extension/dist',
-    productionSourceMap: false
-}
+    productionSourceMap: false,
+    outputDir: 'extension/dist'
+};
