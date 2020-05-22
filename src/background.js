@@ -4,7 +4,7 @@ let weatherInfo = {
     htmlCode: '',
     temp: 0,
     city: '',
-    searchLink: 'https://www.baidu.com/s?wd=' + encodeURIComponent('天气') + '&inputT=1245',
+    searchLink: 'https://www.baidu.com/s?wd=' + encodeURIComponent('天气'),
     icon: null,
     errorMessage: null,
     timer: null,
@@ -20,52 +20,12 @@ function init() {
     browser.storage.local.get().then((result) => {
         if (result.city) weatherInfo.city = result.city;
         if (parseInt(result.interval)) weatherInfo.interval = parseInt(result.interval);
-        if (typeof (result.realtime_weather) == 'boolean') weatherInfo.isShowIcon = result.realtime_weather;
-        if (typeof (result.realtime_temp) == 'boolean') weatherInfo.isShowTemp = result.realtime_temp;
+        if (typeof (result.isShowIcon) == 'boolean') weatherInfo.isShowIcon = result.isShowIcon;
+        if (typeof (result.isShowTemp) == 'boolean') weatherInfo.isShowTemp = result.isShowTemp;
     }, onError).then(update).then(() => {
         weatherInfo.timer = setInterval(update, weatherInfo.interval * 60000);
     }).catch(onError);
     browser.runtime.onMessage.addListener(handleMessage);
-    browser.storage.onChanged.addListener(handleStorageChange);
-    window.weatherInfo = weatherInfo;
-}
-
-function handleStorageChange(changes) {
-    for (let item in changes) {
-        switch (item) {
-            case 'realtime_weather':
-                if (weatherInfo.isShowIcon != changes[item].newValue) {
-                    weatherInfo.isShowIcon = changes[item].newValue;
-                    if (weatherInfo.isShowIcon) fetch(weatherInfo.icon, { credentials: 'include' }).then(setIcon).catch(onError);
-                    else resetBadgeText();
-                }
-                break;
-            case 'realtime_temp':
-                if (weatherInfo.isShowTemp != changes[item].newValue) {
-                    weatherInfo.isShowTemp = changes[item].newValue;
-                    if (weatherInfo.isShowTemp) browser.browserAction.setBadgeText({ text: weatherInfo.temp });
-                    else browser.browserAction.setBadgeText({ text: '' });
-                }
-                break;
-            case 'city':
-                if (weatherInfo.city != changes[item].newValue) {
-                    weatherInfo.city = changes[item].newValue;
-                    update();
-                }
-                break;
-            case 'interval': {
-                let newValue = parseInt(changes[item].newValue);
-                if (newValue) {
-                    weatherInfo.interval = newValue;
-                } else {
-                    weatherInfo.interval = 20;
-                }
-                clearInterval(weatherInfo.timer);
-                weatherInfo.timer = setInterval(update, weatherInfo.interval * 60000);
-                break;
-            }
-        }
-    }
 }
 
 function handleMessage(request) {
@@ -85,6 +45,40 @@ function handleMessage(request) {
         }
         case 'get error message': {
             return Promise.resolve({ response: weatherInfo.errorMessage });
+        }
+        case 'get settings': {
+            return browser.storage.local.get().then(result => ({ response: result }));
+        }
+        case 'change settings': {
+            return browser.storage.local.get().then(result => {
+                let { city, interval, isShowIcon, isShowTemp } = request.settings;
+                if (result.city !== city) {
+                    weatherInfo.city = city;
+                }
+                if (result.interval !== interval) {
+                    if (!parseInt(interval)) weatherInfo.interval = 20;
+                    else weatherInfo.interval = parseInt(interval);
+                    clearInterval(weatherInfo.timer);
+                    weatherInfo.timer = setInterval(update, weatherInfo.interval * 60000);
+                }
+                if (result.isShowIcon !== isShowIcon) {
+                    weatherInfo.isShowIcon = isShowIcon;
+                    if (weatherInfo.isShowIcon) fetch(weatherInfo.icon, { credentials: 'include' }).then(setIcon).catch(onError);
+                    else resetBadgeIcon();
+                }
+                if (result.isShowTemp !== isShowTemp) {
+                    weatherInfo.isShowTemp = isShowTemp;
+                    if (weatherInfo.isShowTemp) browser.browserAction.setBadgeText({ text: weatherInfo.temp });
+                    else resetBadgeText();
+                }
+                return browser.storage.local.set({ city, interval, isShowIcon, isShowTemp }).then(() => {
+                    if (result.city || city) return { response: 'update' };
+                    else return { response: 'ok' };
+                });
+            });
+        }
+        case 'get arrowColor': {
+            return Promise.resolve({ response: weatherInfo.arrowColor });
         }
     }
 }
@@ -129,7 +123,7 @@ function parseInfo(text) {
         weatherInfo.icon = htmlCode.match(/<div class="op_weather4_twoicon_icon" style="background-image:url\(([^(]*?)\)/)[1];
         if (weatherInfo.icon) fetch(weatherInfo.icon, { credentials: 'include' }).then(setIcon).catch(onError);
         if (weatherInfo.isShowTemp) browser.browserAction.setBadgeText({ text: weatherInfo.temp });
-        else browser.browserAction.setBadgeText({ text: '' });
+        else resetBadgeText();
         weatherInfo.errorMessage = null;
     } else {
         weatherInfo.errorMessage = '抓取规则匹配失败';
