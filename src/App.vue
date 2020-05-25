@@ -170,10 +170,13 @@ export default {
 .weather-panel >>> .c-container {
     font-size: 13px;
 }
-.weather-panel >>> .op_weather4_twoicon_bg,
+
 .weather-panel >>> .op_weather4_twoicon {
+    box-sizing: content-box;
     height: 268px !important;
+    overflow: hidden;
 }
+
 .error-panel {
     width: 538px;
     height: 268px;
