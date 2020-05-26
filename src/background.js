@@ -116,7 +116,7 @@ function parseInfo(text) {
             .replace(/<h3[\s\S]*?<\/h3>/, '')
             .replace(/<div class="op_weather4_xiala"[\s\S]*<\/div>/, '</div>')
             .replace(/<script[\s\S]*?<\/script>/g, '');
-    if (htmlCode) {
+    if (htmlCode && htmlCode.indexOf('无法定位') === -1) {
         weatherInfo.htmlCode = htmlCode;
         weatherInfo.arrowColor = arrowColor ? arrowColor[1] : '';
         weatherInfo.temp = htmlCode.match(/<span class="op_weather4_twoicon_shishi_title">(\d+)<\/span>/)[1];
